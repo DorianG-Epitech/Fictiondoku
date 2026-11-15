@@ -57,7 +57,7 @@ Pipeline (`tools/`, à lancer depuis ce dossier) :
 9. `grids.py` : nombre de grilles possibles → `data/grid_counts.json`.
 10. `build_site.py` : `docs/data.json` et `docs/index.html` (à partir de `template.html` et `core.js`).
 
-Tests : `node test.js` (logique du jeu, génération de grilles) et `node e2e.js` (navigateur sans interface, nécessite `npm i puppeteer`).
+Tests : `node test.js` (logique du jeu, génération de grilles) et `node e2e.js` (navigateur sans interface, nécessite `npm i puppeteer-core` et Google Chrome).
 
 Les caches Wikidata intermédiaires (environ 100 Mo) ne sont pas versionnés : les étapes 2 à 4 les régénèrent en quelques minutes.
 
