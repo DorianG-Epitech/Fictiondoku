@@ -6,30 +6,71 @@ SAFE={'univers','equipe','createur','type','metier'}
 def norm(s):
     s=unicodedata.normalize('NFKD',s.lower()); s=''.join(c for c in s if not unicodedata.combining(c))
     return re.sub(r'[^a-z0-9]+',' ',s).strip()
+CATLAB={'marvel':'Marvel','dc':'DC','starwars':'Star Wars','startrek':'Star Trek','hp':'Harry Potter','tolkien':'Terre du Milieu','disney':'Disney','simpsons':'Les Simpson','nintendo':'Nintendo','mario':'Mario','sega':'Sega','pokemon':'Pokémon','dbz':'Dragon Ball','naruto':'Naruto','onepiece':'One Piece','got':'Le Trône de fer','doctorwho':'Doctor Who','looney':'Looney Tunes','ff':'Final Fantasy','shakespeare':'Shakespeare'}
+CATPRI=['mario','pokemon','dbz','naruto','onepiece','got','doctorwho','looney','ff','simpsons','hp','tolkien','starwars','startrek','marvel','dc','shakespeare','sega','nintendo','disney']
+UMAP=[(r'Terre-616|Earth-616|^Marvel|Cinématographique Marvel|Marvel Cinematic|Ultimate Marvel|Marvel Mangaverse|Spider-Verse','Marvel'),
+      (r'^DC\b|Earth-(One|Two|Three|Prime)|Terre-(Un|Deux|Trois)|Arkhamverse|Adaptations de (Batman|Superman)|Cinématographique DC|DC animated|DC Extended','DC'),
+      (r'Monde des sorciers|Wizarding World|^Harry Potter','Harry Potter'),
+      (r'Légendaire de Tolkien|Terre du Milieu|Middle-earth','Terre du Milieu'),
+      (r"Classiques d'animation Disney",'Disney'),(r'^Trône de fer|A Song of Ice and Fire|Game of Thrones','Le Trône de fer'),
+      (r'^Star Wars','Star Wars'),(r'^Star Trek','Star Trek')]
+UBL=re.compile(r"Journal of|Journal\b|News\b|Herald|Cosmopolitan|Drapeau|Linux|^KDE$|Microsoft|^Internet$|Propagande|État islamique|^BBC|Index linguæ|Kievlyanin|Al-Seyassah|Greatest Films|^\d{1,2} \w+ \d{4}$|^\d{4}$|The Register|Late Night with|Last Week Tonight|Sinterklaasjournaal|KiKA|Pikku Kakkonen|Die Sendung mit der Maus",re.I)
+def unorm(u):
+    if not u or UBL.search(u): return None
+    for rx,t in UMAP:
+        if re.search(rx,u): return t
+    u=re.sub(r'\s*\([^)]*\)$','',u).strip() or u
+    u=re.sub(r'\s+(animated |fictional |cinematic |shared |media )?(universe|Universe|univers|franchise|Franchise)$','',u).strip()
+    return u or None
+WEAK={'disney','nintendo','sega'}
+KW={'marvel':'Marvel','dc':r'\bDC\b|Batman|Superman','starwars':'Star Wars|Guerre des étoiles','startrek':'Star Trek','hp':'Harry Potter|sorciers|Wizarding','tolkien':'Tolkien|Terre du Milieu|Middle-earth|Anneaux|Hobbit|Silmarillion','simpsons':'Simpson','mario':'Mario','pokemon':'Pokémon|Pokemon','dbz':'Dragon Ball','naruto':'Naruto','onepiece':'One Piece','got':'Trône de fer|Game of Thrones|Ice and Fire|Westeros','doctorwho':'Doctor Who','looney':'Looney|Merrie','ff':'Final Fantasy','shakespeare':'Shakespeare|Hamlet|Macbeth|Roméo|Othello|Lear|Tempête|Songe'}
+def ulab(c):
+    u=unorm(c['univ'])
+    cu=[x for x in CATPRI if x in c['cats']]
+    strong=[x for x in cu if x not in WEAK]
+    ctx=(c.get('uctx') or '')+' | '+(c['univ'] or '')
+    for x in strong:
+        if u is None or u in CATLAB.values() or re.search(KW[x],ctx): return CATLAB[x]
+    if cu and (u is None or norm(u)==norm(c['name'])): return CATLAB[cu[0]]
+    return u
+for c in chars: c['U']=ulab(c)
 groups=collections.defaultdict(list)
 for c in chars: groups[norm(c['name'])].append(c)
-out=[]
+out=[];removed=[]
 for k,cs in groups.items():
-    cs.sort(key=lambda c:-c['sl']); p=cs[0]
-    cats=set(p['cats'])
-    pu={x for x in p['cats'] if G[x]=='univers'}
-    alts=[]
-    for d in cs[1:]:
+    cs.sort(key=lambda c:-c['sl'])
+    clusters=[]
+    for d in cs:
         du={x for x in d['cats'] if G[x]=='univers'}
-        linked = p['id'] in (d['P']['P144']+d['P']['P460']) or d['id'] in (p['P']['P144']+p['P']['P460'])
-        if linked or (du & pu):
-            cats|={x for x in d['cats'] if G[x] in SAFE}
-        else:
-            alts.append(set(d['cats']))  # homonym (other work): accepted only on its own categories
-    al=set()
-    for d in cs: al|=set(d['aliases'])
-    nm=p['name']; nm=nm[0].upper()+nm[1:]
-    al={a for a in al if norm(a)!=norm(nm) and norm(a)}
-    # dedupe aliases by norm
-    seen=set();als=[]
-    for a in sorted(al,key=len):
-        if norm(a) not in seen: seen.add(norm(a)); als.append(a)
-    out.append(dict(name=nm,aliases=als[:12],sl=p['sl'],cats=cats,alts=alts,ids=[d['id'] for d in cs],first=p['first']))
+        tgt=None
+        for cl in clusters:
+            p=cl[0]
+            pu={x for x in p['cats'] if G[x]=='univers'}
+            linked = p['id'] in (d['P']['P144']+d['P']['P460']) or d['id'] in (p['P']['P144']+p['P']['P460'])
+            if linked or (du & pu) or (d['U'] and d['U']==p['U']) or (d['U'] is None and p['U'] is not None and not du):
+                tgt=cl;break
+        if tgt is None: clusters.append([d])
+        else: tgt.append(d)
+    for cl in clusters:
+        p=cl[0]
+        U=p['U'] or next((d['U'] for d in cl if d['U']),None)
+        nm=p['name']; nm=nm[0].upper()+nm[1:]
+        if not U:
+            removed.append((nm,[d['id'] for d in cl])); continue
+        cats=set(p['cats'])
+        for d in cl[1:]: cats|={x for x in d['cats'] if G[x] in SAFE}
+        al=set()
+        for d in cl: al|=set(d['aliases'])
+        al={a for a in al if norm(a)!=norm(nm) and norm(a)}
+        seen=set();als=[]
+        for a in sorted(al,key=len):
+            if norm(a) not in seen: seen.add(norm(a)); als.append(a)
+        out.append(dict(name=nm,aliases=als[:12],sl=p['sl'],cats=cats,alts=[],ids=[d['id'] for d in cl],first=p['first'],univ=U))
+removed.sort(key=lambda r:norm(r[0]))
+with open('../data/personnages_sans_univers.txt','w',encoding='utf-8') as f:
+    f.write('# Personnages retirés de Fictiondoku : aucun univers / œuvre trouvé sur Wikidata (%d)\n# Nom\tQID Wikidata\n'%len(removed))
+    for nm,ids in removed: f.write(nm+'\t'+' '.join(ids)+'\n')
+print('removed (no universe)',len(removed))
 # era fix: a character whose name is an alias of another (e.g. 'Peter Parker' -> Spider-Man) inherits the earliest first-appearance year
 aliasmin={}
 for c in out:
@@ -60,6 +101,6 @@ catids=[cid for cid,l,g,f in CATS]
 cnt=collections.Counter(x for c in out for x in c['cats'])
 print('characters',len(out),'notable(sl>=8)',sum(c['sl']>=8 for c in out))
 json.dump({'cats':[{'id':cid,'label':l,'group':g,'n':cnt[cid],'n8':sum(1 for c in out if cid in c['cats'] and c['sl']>=8)} for cid,l,g,f in CATS],
-           'chars':[{'name':c['name'],'aliases':c['aliases'],'sl':c['sl'],'cats':sorted(c['cats'],key=catids.index),'wikidata':c['ids'],'first_year':c['first'],'homonyms_cats':[sorted(a,key=catids.index) for a in c['alts']]} for c in out]},
+           'chars':[{'name':c['name'],'aliases':c['aliases'],'sl':c['sl'],'cats':sorted(c['cats'],key=catids.index),'wikidata':c['ids'],'first_year':c['first'],'universe':c['univ']} for c in out]},
           open('../data/fictiondoku_clean.json','w'),ensure_ascii=False,indent=0)
 pickle.dump((out,catids),open('final.pkl','wb'))

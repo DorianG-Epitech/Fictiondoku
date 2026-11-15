@@ -9,7 +9,8 @@ var W={univers:3,equipe:1.5,createur:1,type:2,metier:2,media:2,genre:1.2,pays:1.
 function init(data){
   var cats=data.cats.map(function(c,i){return {i:i,id:c[0],label:c[1],group:c[2]};});
   var K=cats.length;
-  var chars=data.chars.map(function(c,i){var al=c[1]?c[1].split('|'):[];return {i:i,name:c[0],aliases:al,sl:c[2],cats:c[3],alts:c[4]||[],keys:[norm(c[0])].concat(al.map(norm))};});
+  var chars=data.chars.map(function(c,i){var al=c[1]?c[1].split('|'):[];return {i:i,name:c[0],aliases:al,sl:c[2],cats:c[3],univ:(data.univ&&c[4]!=null)?data.univ[c[4]]:'',alts:c[5]||[],keys:[norm(c[0])].concat(al.map(norm))};});
+  chars.forEach(function(ch){ch.label=ch.univ?ch.name+' ('+ch.univ+')':ch.name;});
   var members=cats.map(function(){return [];});
   var pairAll=new Int32Array(K*K),pair8=new Int32Array(K*K);
   chars.forEach(function(ch){ch.catset={};ch.cats.forEach(function(a){ch.catset[a]=1;members[a].push(ch.i);

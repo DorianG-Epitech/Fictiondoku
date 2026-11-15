@@ -19,7 +19,7 @@ button:hover{border-color:var(--accent)}button.primary{background:var(--accent);
 .cell:hover{border-color:var(--accent);transform:translateY(-1px)}
 .cell.ok{background:linear-gradient(160deg,#1d4d3a,#173a2d);border-color:var(--ok);cursor:default}
 .cell.done{cursor:pointer}.cell.miss{background:#2a1a24;border-color:#5a2a3a}
-.cell .nm{font-weight:700;font-size:14px;word-break:break-word}.cell .pts{font-size:12px;color:var(--gold);margin-top:4px}
+.cell .nm{font-weight:700;font-size:14px;word-break:break-word}.cell .un{font-size:11px;color:var(--muted);margin-top:2px;word-break:break-word}.sugg li .un{color:var(--muted);font-size:13px}.cell .pts{font-size:12px;color:var(--gold);margin-top:4px}
 .cell .cnt{font-size:11px;color:var(--muted);margin-top:4px}
 .shake{animation:sh .35s}@keyframes sh{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
 .modal{position:fixed;inset:0;background:rgba(5,6,15,.72);display:none;align-items:flex-start;justify-content:center;padding-top:10vh;z-index:10}
@@ -75,7 +75,7 @@ function render(){
   var h='<div class="corner">'+({facile:'Facile',normal:'Normal',difficile:'Difficile'}[S.diff])+'</div>';
   S.cols.forEach(function(c){h+=hdr(c);});
   for(var r=0;r<3;r++){h+=hdr(S.rows[r]);for(var c=0;c<3;c++){var k=r*3+c,v=S.cells[k];var n=G.answers(S.rows[r],S.cols[c]).length;
-    if(v){h+='<div class="cell ok'+(S.over?' done':'')+'" data-k="'+k+'"><div class="nm">'+esc(CH[v.i].name)+'</div><div class="pts">+'+v.p+' pts</div>'+(S.over?'<div class="cnt">'+n+' réponses</div>':'')+'</div>';}
+    if(v){h+='<div class="cell ok'+(S.over?' done':'')+'" data-k="'+k+'"><div class="nm">'+esc(CH[v.i].name)+'</div><div class="un">'+esc(CH[v.i].univ)+'</div><div class="pts">+'+v.p+' pts</div>'+(S.over?'<div class="cnt">'+n+' réponses</div>':'')+'</div>';}
     else h+='<div class="cell'+(S.over?' miss done':'')+'" data-k="'+k+'">'+(S.over?'<div class="cnt">'+n+' réponses<br>voir</div>':'')+'</div>';}}
   $('grid').innerHTML=h;
   $('hearts').textContent='❤️'.repeat(S.lives)+'🖤'.repeat(3-S.lives);$('score').textContent=S.score;
@@ -93,21 +93,21 @@ function usedSet(){var u={};S.cells.forEach(function(v){if(v)u[v.i]=1;});return 
 function openCell(k){
   var r=S.rows[Math.floor(k/3)],c=S.cols[k%3];cur=k;$('mTitle').textContent=C[r].label+'  ×  '+C[c].label;$('msg').textContent='';
   if(S.over){$('q').style.display='none';$('sugg').innerHTML='';var a=G.answers(r,c);
-    $('ans').innerHTML='<div class="muted" style="column-span:all">'+a.length+' réponses, des plus connues aux plus rares :</div>'+a.slice(0,300).map(function(i){var mine=S.cells[k]&&S.cells[k].i===i;return '<div>'+(mine?'<b>'+esc(CH[i].name)+' ✔</b>':esc(CH[i].name))+'</div>';}).join('')+(a.length>300?'<div class="muted">… et '+(a.length-300)+' autres</div>':'');
+    $('ans').innerHTML='<div class="muted" style="column-span:all">'+a.length+' réponses, des plus connues aux plus rares :</div>'+a.slice(0,300).map(function(i){var mine=S.cells[k]&&S.cells[k].i===i;return '<div>'+(mine?'<b>'+esc(CH[i].label)+' ✔</b>':esc(CH[i].label))+'</div>';}).join('')+(a.length>300?'<div class="muted">… et '+(a.length-300)+' autres</div>':'');
   } else { if(S.cells[k])return; $('ans').innerHTML='';$('q').style.display='';$('q').value='';$('sugg').innerHTML='';}
   $('modal').classList.add('show');if(!S.over)setTimeout(function(){$('q').focus();},30);
 }
 function closeM(){$('modal').classList.remove('show');cur=null;}
 $('mClose').onclick=closeM;$('modal').onclick=function(e){if(e.target===$('modal'))closeM();};
-function renderSugg(){var u=usedSet();$('sugg').innerHTML=results.map(function(x,j){var ch=CH[x.i];return '<li data-j="'+j+'" class="'+(j===selIdx?'sel ':'')+(u[x.i]?'used':'')+'"><span>'+esc(ch.name)+'</span>'+(x.via?'<span class="al">'+esc(x.via)+'</span>':'')+'</li>';}).join('');
+function renderSugg(){var u=usedSet();$('sugg').innerHTML=results.map(function(x,j){var ch=CH[x.i];return '<li data-j="'+j+'" class="'+(j===selIdx?'sel ':'')+(u[x.i]?'used':'')+'"><span>'+esc(ch.name)+' <span class="un">('+esc(ch.univ)+')</span></span>'+(x.via?'<span class="al">'+esc(x.via)+'</span>':'')+'</li>';}).join('');
   Array.prototype.forEach.call($('sugg').children,function(li){li.onclick=function(){choose(+li.dataset.j);};});}
 $('q').oninput=function(){results=G.search($('q').value,8);selIdx=0;$('msg').textContent='';renderSugg();};
 $('q').onkeydown=function(e){if(e.key==='ArrowDown'){selIdx=Math.min(selIdx+1,results.length-1);renderSugg();e.preventDefault();}else if(e.key==='ArrowUp'){selIdx=Math.max(selIdx-1,0);renderSugg();e.preventDefault();}else if(e.key==='Enter'){if(results.length)choose(selIdx);}else if(e.key==='Escape')closeM();};
 function choose(j){var x=results[j];if(!x||cur===null||S.over)return;var i=x.i;
   if(usedSet()[i]){$('msg').textContent='Déjà utilisé dans cette grille.';return;}
   var r=S.rows[Math.floor(cur/3)],c=S.cols[cur%3];S.guesses++;
-  if(G.ok(i,r,c)){var p=G.points(r,c,i);S.cells[cur]={i:i,p:p};S.score+=p;closeM();toast(CH[i].name+' ✔ +'+p+' pts');}
-  else{S.lives--;$('msg').textContent=CH[i].name+' ne coche pas les deux critères. ('+S.lives+' vie'+(S.lives>1?'s':'')+' restante'+(S.lives>1?'s':'')+')';var box=document.querySelector('.box');box.classList.remove('shake');void box.offsetWidth;box.classList.add('shake');$('q').select();if(S.lives<=0){closeM();}}
+  if(G.ok(i,r,c)){var p=G.points(r,c,i);S.cells[cur]={i:i,p:p};S.score+=p;closeM();toast(CH[i].label+' ✔ +'+p+' pts');}
+  else{S.lives--;$('msg').textContent=CH[i].label+' ne coche pas les deux critères. ('+S.lives+' vie'+(S.lives>1?'s':'')+' restante'+(S.lives>1?'s':'')+')';var box=document.querySelector('.box');box.classList.remove('shake');void box.offsetWidth;box.classList.add('shake');$('q').select();if(S.lives<=0){closeM();}}
   if(S.lives<=0||S.cells.every(Boolean))S.over=true;save();render();}
 $('bGive').onclick=function(){if(confirm('Abandonner et voir les réponses ?')){S.over=true;save();render();}};
 function setMode(m){mode=m;$('bDaily').classList.toggle('on',m==='daily');$('bFree').classList.toggle('on',m==='free');start();}

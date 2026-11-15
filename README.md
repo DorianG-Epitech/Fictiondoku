@@ -1,6 +1,6 @@
 # Fictiondoku
 
-La grille 3x3 des personnages de fiction, façon Pokedoku / Métrodoku. Chaque case croise un critère de ligne et un critère de colonne : trouve un personnage qui coche les deux. Films, séries, BD et comics, manga et anime, jeux vidéo, romans, dessins animés : **61 592 personnages** issus de Wikidata.
+La grille 3x3 des personnages de fiction, façon Pokedoku / Métrodoku. Chaque case croise un critère de ligne et un critère de colonne : trouve un personnage qui coche les deux. Films, séries, BD et comics, manga et anime, jeux vidéo, romans, dessins animés : **64 244 personnages** issus de Wikidata, chacun affiché avec son univers, par exemple « Spider-Man (Marvel) » ou « Link (The Legend of Zelda) ».
 
 ▶ **Jouer dans le navigateur (ordinateur et mobile) :** https://doriang-epitech.github.io/Fictiondoku/
 
@@ -35,10 +35,16 @@ Le nombre de personnages par critère est dans `data/fictiondoku_clean.json` (ch
 
 La notoriété d'un personnage, c'est son **nombre d'articles Wikipédia** (toutes langues confondues, les « sitelinks » de Wikidata).
 
-- Les grilles sont construites **uniquement avec les 3 945 personnages très connus** (8 langues ou plus). Une case doit avoir au moins 12 (Facile), 5 (Normal) ou 3 (Difficile) réponses très connues, et la grille entière doit avoir une solution avec 9 personnages différents.
-- Les quelque 57 600 autres sont **acceptés comme réponses**, et ce sont eux qui rapportent le plus de points.
-- Nombre de grilles différentes possibles : environ 6 millions en Facile, 147 millions en Normal, 231 millions en Difficile (`data/grid_counts.json`).
-- **Homonymes** : quand un personnage moins connu porte le même nom qu'un autre, d'un univers sans rapport, il n'est accepté que sur ses propres critères.
+- Les grilles sont construites **uniquement avec les 3 759 personnages très connus** (8 langues ou plus). Une case doit avoir au moins 12 (Facile), 5 (Normal) ou 3 (Difficile) réponses très connues, et la grille entière doit avoir une solution avec 9 personnages différents.
+- Les quelque 60 500 autres sont **acceptés comme réponses**, et ce sont eux qui rapportent le plus de points.
+- Nombre de grilles différentes possibles : environ 6 millions en Facile, 145 millions en Normal, 232 millions en Difficile (`data/grid_counts.json`).
+- **Homonymes** : deux personnages du même nom mais d'univers différents sont deux entrées distinctes, qu'on distingue grâce à l'univers affiché (« Thor (Marvel) » et « Thor (Stargate) »).
+
+## Univers
+
+Chaque personnage est affiché avec son univers : dans les suggestions de recherche, dans la grille et dans la liste des réponses. L'univers, c'est la franchise ou l'univers de fiction du personnage sur Wikidata (« franchise », « univers de fiction »). À défaut, c'est la franchise ou la série de l'œuvre où il apparaît pour la première fois ou le plus souvent, ou cette œuvre elle-même. Pour les personnages de mythologie ou de folklore, c'est leur classe (« Mythologie grecque », « Folklore »). Les grandes franchises reprennent les noms des critères (Marvel, DC, Star Wars, Harry Potter, Terre du Milieu…).
+
+Les personnages pour lesquels aucun univers n'a été trouvé sont **retirés** du jeu. Il y en a 6 820, listés dans `data/personnages_sans_univers.txt` (nom et QID Wikidata).
 
 ## Données et méthode
 
@@ -50,10 +56,10 @@ Pipeline (`tools/`, à lancer depuis ce dossier) :
 2. `t3b.py` : tous les éléments de ces classes, sans seuil de notoriété (112 102) → `items_all.json`.
 3. `t4b.py` : propriétés (genre, classe, univers, œuvres, créateur, métier, affiliation…), libellés et alias → `raw_chars_all.json`.
 4. `t5b.py` : propriétés des œuvres liées (type, pays, date, genre, éditeur, série…) et leurs libellés → `raw_works_all.json`.
-5. `t6.py` : arbre des classes (sous-classe de) → `classes_tree.json`.
-6. `build.py` : choix des personnages et nettoyage (rôles génériques, rôles d'opéra sans article, éléments sans œuvre…), puis calcul du support d'origine, du pays, de l'époque et du genre.
+5. `t6.py` : arbre des classes (sous-classe de) → `classes_tree.json`. `t7.py` : un niveau de plus pour les franchises et les séries (franchise de la série d'une œuvre) → `raw_hop.json`.
+6. `build.py` : choix des personnages et nettoyage (rôles génériques, rôles d'opéra sans article, éléments sans œuvre…), puis calcul du support d'origine, du pays, de l'époque, du genre et de l'univers.
 7. `assign.py` : attribution des critères, définis dans `cats.py` (règles par propriétés Wikidata, ascendance des classes et expressions régulières).
-8. `export.py` : fusion des doublons et des homonymes, alias, correction des époques → `data/fictiondoku_clean.json`.
+8. `export.py` : choix du nom d'univers affiché, fusion des doublons du même univers, retrait des personnages sans univers, alias, correction des époques → `data/fictiondoku_clean.json` et `data/personnages_sans_univers.txt`.
 9. `grids.py` : nombre de grilles possibles → `data/grid_counts.json`.
 10. `build_site.py` : `docs/data.json` et `docs/index.html` (à partir de `template.html` et `core.js`).
 
@@ -65,13 +71,15 @@ Les caches Wikidata intermédiaires (environ 100 Mo) ne sont pas versionnés : l
 
 - `docs/index.html` : le jeu complet (HTML, JS, données) servi par GitHub Pages.
 - `docs/data.json` + `docs/core.js` : les mêmes données et la même logique, séparées.
-- `data/fictiondoku_clean.json` : le jeu de données propre. Pour chaque personnage : nom, alias, notoriété, critères, QID Wikidata, année de 1re apparition et critères de ses homonymes.
+- `data/fictiondoku_clean.json` : le jeu de données propre. Pour chaque personnage : nom, univers, alias, notoriété, critères, QID Wikidata et année de 1re apparition.
+- `data/personnages_sans_univers.txt` : les personnages retirés faute d'univers.
 
 ## Limites connues
 
 - Un héros et son identité secrète sont parfois deux entrées distinctes (Batman et Bruce Wayne, Daredevil et Matt Murdock).
 - Beaucoup de personnages peu connus n'ont qu'un nom anglais.
-- Il reste quelques erreurs ou approximations de Wikidata (Merlin et le TARDIS rangés dans Star Trek, par exemple). Les personnages rares ont plus souvent un support ou une époque manquants.
+- Il reste quelques erreurs ou approximations de Wikidata. Les personnages rares ont plus souvent un support ou une époque manquants.
+- Certains univers sont simplement le titre d'une œuvre, parfois en anglais ou approximatif (« La trilogie de Merlin », « Le Père Noël contre les Martiens »…).
 
 ## Aperçu
 
