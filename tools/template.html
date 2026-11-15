@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fictiondoku — la grille des personnages de fiction</title>
+<style>
+:root{--bg:#0f1220;--panel:#181c2f;--panel2:#20253d;--text:#eef0f8;--muted:#9aa1bd;--accent:#7c5cff;--ok:#2fbf71;--bad:#ff5470;--gold:#ffc94d;--border:#2c3254}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(1200px 600px at 50% -200px,#2a2160,var(--bg));color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+header{text-align:center;padding:18px 10px 4px}h1{margin:0;font-size:30px;letter-spacing:.5px}h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:14px;margin-top:4px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin:12px auto;max-width:760px;padding:0 10px}
+button,select{font:inherit;border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:10px;padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--accent)}button.primary{background:var(--accent);border-color:var(--accent)}button.on{background:var(--accent);border-color:var(--accent)}
+.status{display:flex;gap:18px;justify-content:center;align-items:center;margin:6px 0 10px;font-size:15px;flex-wrap:wrap}
+.hearts{font-size:20px;letter-spacing:3px}
+.grid{display:grid;grid-template-columns:minmax(70px,1fr) repeat(3,minmax(80px,1.4fr));gap:8px;max-width:640px;margin:0 auto;padding:0 10px}
+.hdr{display:flex;align-items:center;justify-content:center;text-align:center;font-weight:600;font-size:14px;padding:6px;min-height:64px;line-height:1.2;position:relative;cursor:help}
+.hdr small{display:block;color:var(--muted);font-weight:400;font-size:11px;margin-top:2px}
+.corner{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center}
+.cell{aspect-ratio:1/1;background:var(--panel);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6px;cursor:pointer;transition:.15s;font-size:14px;position:relative;overflow:hidden}
+.cell:hover{border-color:var(--accent);transform:translateY(-1px)}
+.cell.ok{background:linear-gradient(160deg,#1d4d3a,#173a2d);border-color:var(--ok);cursor:default}
+.cell.done{cursor:pointer}.cell.miss{background:#2a1a24;border-color:#5a2a3a}
+.cell .nm{font-weight:700;font-size:14px;word-break:break-word}.cell .pts{font-size:12px;color:var(--gold);margin-top:4px}
+.cell .cnt{font-size:11px;color:var(--muted);margin-top:4px}
+.shake{animation:sh .35s}@keyframes sh{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.modal{position:fixed;inset:0;background:rgba(5,6,15,.72);display:none;align-items:flex-start;justify-content:center;padding-top:10vh;z-index:10}
+.modal.show{display:flex}.box{background:var(--panel);border:1px solid var(--border);border-radius:16px;width:min(560px,94vw);padding:16px;max-height:80vh;display:flex;flex-direction:column}
+.box h3{margin:0 0 10px;font-size:16px}.box input{font:inherit;width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:17px;outline:none}
+.box input:focus{border-color:var(--accent)}
+.sugg{list-style:none;margin:8px 0 0;padding:0;overflow:auto}.sugg li{padding:10px 12px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.sugg li.sel,.sugg li:hover{background:var(--panel2)}.sugg li .al{color:var(--muted);font-size:13px}.sugg li.used{opacity:.4;text-decoration:line-through}
+.msg{min-height:22px;margin-top:8px;font-size:14px;color:var(--bad)}
+.ans{overflow:auto;margin-top:6px;columns:2;column-gap:18px;font-size:14px}.ans div{break-inside:avoid;padding:2px 0}.ans div b{color:var(--gold);font-weight:600}
+.end{max-width:640px;margin:14px auto;padding:14px;background:var(--panel);border:1px solid var(--border);border-radius:14px;text-align:center;display:none}
+.end.show{display:block}.end .big{font-size:26px;font-weight:800}.muted{color:var(--muted);font-size:13px}
+.help{max-width:640px;margin:16px auto 30px;padding:0 14px;color:var(--muted);font-size:13px;line-height:1.5}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--border);padding:10px 16px;border-radius:10px;display:none;z-index:20}
+@media(max-width:520px){.hdr{font-size:11.5px;min-height:56px;padding:2px}.cell .nm{font-size:12px}h1{font-size:24px}}
+</style></head><body>
+<header><h1>Fiction<span>doku</span></h1><div class="sub">Trouve un personnage de fiction qui coche les deux critères de chaque case.</div></header>
+<div class="bar">
+  <button id="bDaily" class="on">Grille du jour</button>
+  <button id="bFree">Partie libre</button>
+  <select id="diff" title="Difficulté"><option value="facile">Facile</option><option value="normal" selected>Normal</option><option value="difficile">Difficile</option></select>
+  <button id="bNew" style="display:none">Nouvelle grille</button>
+  <button id="bGive">Abandonner</button>
+</div>
+<div class="status"><span id="title"></span><span class="hearts" id="hearts"></span><span>Score : <b id="score">0</b></span></div>
+<div class="grid" id="grid"></div>
+<div class="end" id="end"></div>
+<div class="help"><b>Règles.</b> Chaque case croise le critère de sa ligne et celui de sa colonne. Tape un nom (accents et majuscules ignorés, alias acceptés), choisis dans la liste. Chaque personnage ne peut servir qu'une fois. 3 vies : chaque mauvaise réponse en coûte une. Plus ton personnage est méconnu parmi les bonnes réponses, plus il rapporte (10 à 100 pts). Survole un critère pour sa définition. En fin de partie, clique sur une case pour voir toutes les réponses possibles.<br><span id="dbinfo"></span> Données : Wikidata (CC0) — quelques erreurs ou oublis sont possibles.</div>
+<div class="modal" id="modal"><div class="box"><h3 id="mTitle"></h3><input id="q" autocomplete="off" placeholder="Nom du personnage…"><ul class="sugg" id="sugg"></ul><div class="msg" id="msg"></div><div class="ans" id="ans"></div><div style="text-align:right;margin-top:8px"><button id="mClose">Fermer</button></div></div></div>
+<div class="toast" id="toast"></div>
+<script>var DATA=/*__DATA__*/null;</script>
+<script>/*__CORE__*/</script>
+<script>
+(function(){
+var G=FD.init(DATA),C=G.cats,CH=G.chars,$=function(id){return document.getElementById(id);};
+function esc(t){return String(t).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
+var EPOCH=new Date('2026-11-15T12:00:00');
+function today(){var d=new Date();var p=new Intl.DateTimeFormat('fr-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);return p;}
+var store={get:function(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+var mode='daily',S=null,cur=null,selIdx=0,results=[];
+$('dbinfo').textContent=CH.length.toLocaleString('fr-FR')+' personnages, '+C.length+' critères.';
+function newState(g,key){return {key:key,rows:g.rows,cols:g.cols,diff:g.diff,cells:[null,null,null,null,null,null,null,null,null],lives:3,score:0,over:false,guesses:0};}
+function start(){
+  if(mode==='daily'){var d=today();var key='fd-daily-'+d;var s=store.get(key);
+    if(!s){var g=G.generate('daily-'+d,'normal');s=newState(g,key);}
+    S=s;var n=Math.round((new Date(d+'T12:00:00')-EPOCH)/864e5)+1;$('title').textContent='Grille du jour n°'+n+' · '+d.split('-').reverse().join('/');
+  } else {var df=$('diff').value;var seed='free-'+Date.now()+'-'+Math.random();var g=G.generate(seed,df);S=newState(g,null);$('title').textContent='Partie libre · '+$('diff').selectedOptions[0].text;}
+  render();
+}
+function save(){if(S.key)store.set(S.key,S);}
+function hdr(c){var g=C[c].group;return '<div class="hdr" title="'+(DATA.desc[g]||'')+'">'+C[c].label+'</div>';}
+function render(){
+  var h='<div class="corner">'+({facile:'Facile',normal:'Normal',difficile:'Difficile'}[S.diff])+'</div>';
+  S.cols.forEach(function(c){h+=hdr(c);});
+  for(var r=0;r<3;r++){h+=hdr(S.rows[r]);for(var c=0;c<3;c++){var k=r*3+c,v=S.cells[k];var n=G.answers(S.rows[r],S.cols[c]).length;
+    if(v){h+='<div class="cell ok'+(S.over?' done':'')+'" data-k="'+k+'"><div class="nm">'+esc(CH[v.i].name)+'</div><div class="pts">+'+v.p+' pts</div>'+(S.over?'<div class="cnt">'+n+' réponses</div>':'')+'</div>';}
+    else h+='<div class="cell'+(S.over?' miss done':'')+'" data-k="'+k+'">'+(S.over?'<div class="cnt">'+n+' réponses<br>voir</div>':'')+'</div>';}}
+  $('grid').innerHTML=h;
+  $('hearts').textContent='❤️'.repeat(S.lives)+'🖤'.repeat(3-S.lives);$('score').textContent=S.score;
+  Array.prototype.forEach.call(document.querySelectorAll('.cell'),function(el){el.onclick=function(){openCell(+el.dataset.k);};});
+  $('bGive').style.display=S.over?'none':'';$('bNew').style.display=mode==='free'?'':'none';$('diff').style.display=mode==='free'?'':'none';
+  var e=$('end');if(S.over){var found=S.cells.filter(Boolean).length;
+    e.innerHTML='<div class="big">'+(found===9?'Grille complète ! 🎉':found+'/9 trouvés')+'</div><div>Score de rareté : <b>'+S.score+'</b> / 900</div><div class="muted">Clique sur une case pour voir les réponses possibles.</div><div style="margin-top:10px"><button id="bShare" class="primary">Copier le résultat</button> '+(mode==='free'?'<button id="bAgain">Rejouer</button>':'<button id="bToFree">Partie libre</button>')+'</div>';
+    e.classList.add('show');$('bShare').onclick=share;if($('bAgain'))$('bAgain').onclick=start;if($('bToFree'))$('bToFree').onclick=function(){setMode('free');};
+  } else e.classList.remove('show');
+}
+function share(){var t='Fictiondoku '+$('title').textContent+'\n';for(var r=0;r<3;r++){for(var c=0;c<3;c++)t+=S.cells[r*3+c]?'🟩':'⬛';t+='\n';}t+='Score : '+S.score+' · Vies : '+S.lives+'/3';
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('Résultat copié !');},function(){prompt('Copie ce texte :',t);});}
+function toast(m){var t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},1800);}
+function usedSet(){var u={};S.cells.forEach(function(v){if(v)u[v.i]=1;});return u;}
+function openCell(k){
+  var r=S.rows[Math.floor(k/3)],c=S.cols[k%3];cur=k;$('mTitle').textContent=C[r].label+'  ×  '+C[c].label;$('msg').textContent='';
+  if(S.over){$('q').style.display='none';$('sugg').innerHTML='';var a=G.answers(r,c);
+    $('ans').innerHTML='<div class="muted" style="column-span:all">'+a.length+' réponses, des plus connues aux plus rares :</div>'+a.slice(0,300).map(function(i){var mine=S.cells[k]&&S.cells[k].i===i;return '<div>'+(mine?'<b>'+esc(CH[i].name)+' ✔</b>':esc(CH[i].name))+'</div>';}).join('')+(a.length>300?'<div class="muted">… et '+(a.length-300)+' autres</div>':'');
+  } else { if(S.cells[k])return; $('ans').innerHTML='';$('q').style.display='';$('q').value='';$('sugg').innerHTML='';}
+  $('modal').classList.add('show');if(!S.over)setTimeout(function(){$('q').focus();},30);
+}
+function closeM(){$('modal').classList.remove('show');cur=null;}
+$('mClose').onclick=closeM;$('modal').onclick=function(e){if(e.target===$('modal'))closeM();};
+function renderSugg(){var u=usedSet();$('sugg').innerHTML=results.map(function(x,j){var ch=CH[x.i];return '<li data-j="'+j+'" class="'+(j===selIdx?'sel ':'')+(u[x.i]?'used':'')+'"><span>'+esc(ch.name)+'</span>'+(x.via?'<span class="al">'+esc(x.via)+'</span>':'')+'</li>';}).join('');
+  Array.prototype.forEach.call($('sugg').children,function(li){li.onclick=function(){choose(+li.dataset.j);};});}
+$('q').oninput=function(){results=G.search($('q').value,8);selIdx=0;$('msg').textContent='';renderSugg();};
+$('q').onkeydown=function(e){if(e.key==='ArrowDown'){selIdx=Math.min(selIdx+1,results.length-1);renderSugg();e.preventDefault();}else if(e.key==='ArrowUp'){selIdx=Math.max(selIdx-1,0);renderSugg();e.preventDefault();}else if(e.key==='Enter'){if(results.length)choose(selIdx);}else if(e.key==='Escape')closeM();};
+function choose(j){var x=results[j];if(!x||cur===null||S.over)return;var i=x.i;
+  if(usedSet()[i]){$('msg').textContent='Déjà utilisé dans cette grille.';return;}
+  var r=S.rows[Math.floor(cur/3)],c=S.cols[cur%3];S.guesses++;
+  if(G.ok(i,r,c)){var p=G.points(r,c,i);S.cells[cur]={i:i,p:p};S.score+=p;closeM();toast(CH[i].name+' ✔ +'+p+' pts');}
+  else{S.lives--;$('msg').textContent=CH[i].name+' ne coche pas les deux critères. ('+S.lives+' vie'+(S.lives>1?'s':'')+' restante'+(S.lives>1?'s':'')+')';var box=document.querySelector('.box');box.classList.remove('shake');void box.offsetWidth;box.classList.add('shake');$('q').select();if(S.lives<=0){closeM();}}
+  if(S.lives<=0||S.cells.every(Boolean))S.over=true;save();render();}
+$('bGive').onclick=function(){if(confirm('Abandonner et voir les réponses ?')){S.over=true;save();render();}};
+function setMode(m){mode=m;$('bDaily').classList.toggle('on',m==='daily');$('bFree').classList.toggle('on',m==='free');start();}
+$('bDaily').onclick=function(){setMode('daily');};$('bFree').onclick=function(){setMode('free');};$('bNew').onclick=start;$('diff').onchange=start;
+start();
+})();
+</script></body></html>

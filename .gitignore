@@ -1,0 +1,7 @@
+# Caches Wikidata et fichiers intermédiaires (régénérables, trop lourds)
+tools/raw_*.json
+tools/items*.json
+tools/*.pkl
+tools/__pycache__/
+tools/assign_report.txt
+node_modules/
